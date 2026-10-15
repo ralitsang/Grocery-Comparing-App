@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="bg" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Кошница.bg — Сравнение на супермаркети в България</title>
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+  </style>
+</head>
+<body class="h-full text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
+  <div id="root" class="min-h-full flex flex-col">
+    <!-- Loading placeholder before JS renders instantly -->
+    <div class="flex items-center justify-center min-h-screen text-slate-400">
+      <div class="text-center">
+        <p class="text-4xl animate-bounce">🛒</p>
+        <p class="font-bold text-slate-700 mt-2">Зареждане на Кошница.bg...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-sm border border-slate-700 transition-opacity duration-300 opacity-0 pointer-events-none">
+    <span>✅</span>
+    <span id="toast-text">Списъкът за пазаруване е копиран в клипборда!</span>
+  </div>
+
+  <!-- Pure Native Client Application (Zero Babel / Zero CDN dependencies) -->
+  <script>
+    // --- STORES & DATA ---
+    const STORES = [
+      {
+        id: 'kaufland',
+        name: 'Kaufland',
+        badge: 'Хипермаркет',
+        color: '#e10915',
+        logo: '🔴',
+        description: 'Огромно разнообразие, собствена марка K-Classic и чести промоции.'
+      },
+      {
+        id: 'lidl',
+        name: 'Lidl',
+        badge: 'Хард Дискаунтър',
+        color: '#0050aa',
+        logo: '🔵',
+        description: 'Собствени марки (Pilos, Pikok, Milbona) на най-ниски дискаунт цени.'
+      },
+      {
+        id: 'tmarket',
+        name: 'T-Market',
+        badge: 'Практичен Дискаунтър',
+        color: '#ea580c',
+        logo: '🟠',
+        description: 'Практичен избор с брандове Extra Line и Optima, и доставки e-tmarket.bg.'
+      },
+      {
+        id: 'billa',
+        name: 'Billa',
+        badge: 'Квартален Супермаркет',
+        color: '#f59e0b',
+        logo: '🟡',
+        description: 'Удобни локации, бранд Clever и уикенд намаления с Billa Card.'
+      },
+      {
+        id: 'fantastico',
+        name: 'Fantastico',
+        badge: 'Премиум Супермаркет',
+        color: '#dc2626',
+        logo: '🟣',
+        description: 'Софийска верига с топ селекция свежо месо, деликатеси и готова храна.'
+      }
+    ];
+
+    const CATEGORIES = [
+      { id: 'all', name: 'Всички', icon: '🛒' },
+      { id: 'dairy', name: 'Млечни продукти', icon: '🥛' },
+      { id: 'meat', name: 'Месо и яйца', icon: '🥩' },
+      { id: 'produce', name: 'Плодове и зеленчуци', icon: '🍎' },
+      { id: 'bakery', name: 'Хляб и тестени', icon: '🍞' },
+      { id: 'pantry', name: 'Бакалия и основни', icon: '🌾' },
+      { id: 'drinks', name: 'Напитки и кафе', icon: '☕' }
+    ];
+
+    const PRODUCTS = [
+      {
+        id: 'milk-fresh-32',
+        name: 'Прясно мляко 3.2% (1L)',
+        category: 'dairy',
+        unit: 'L',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: true,
+        description: 'Пастьоризирано краве мляко по БДС стандарт',
+        prices: {
+          lidl: { brand: 'Pilos', priceEUR: 1.15, packQty: 1.0, packUnit: 'L', isPromo: false },
+          kaufland: { brand: 'K-Classic', priceEUR: 0.95, packQty: 1.0, packUnit: 'L', isPromo: true, promoNote: 'Седмична акция (-15%)' },
+          tmarket: { brand: 'Extra Line 3.2%', priceEUR: 1.05, packQty: 1.0, packUnit: 'L', isPromo: false },
+          billa: { brand: 'Clever', priceEUR: 1.09, packQty: 1.0, packUnit: 'L', isPromo: false },
+          fantastico: { brand: 'Верея', priceEUR: 1.45, packQty: 1.0, packUnit: 'L', isPromo: false }
+        }
+      },
+      {
+        id: 'yogurt-bds-36',
+        name: 'Кисело мляко 3.6% БДС (400g)',
+        category: 'dairy',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 2.0,
+        isBDS: true,
+        description: 'Българско кисело мляко с жива закваска Lactobacillus bulgaricus',
+        prices: {
+          lidl: { brand: 'Pilos БДС', priceEUR: 0.65, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Classic БДС', priceEUR: 0.62, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          tmarket: { brand: 'Extra Line БДС', priceEUR: 0.58, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Clever 3.6%', priceEUR: 0.59, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Billa Card уикенд' },
+          fantastico: { brand: 'Верея БДС', priceEUR: 0.85, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'cheese-white-bds',
+        name: 'Бяло саламурено сирене БДС (кг)',
+        category: 'dairy',
+        unit: 'kg',
+        step: 0.5,
+        defaultQty: 0.8,
+        isBDS: true,
+        description: 'Зряло краве сирене по Български държавен стандарт',
+        prices: {
+          lidl: { brand: 'Pilos (кутия 800g)', priceEUR: 5.20, packQty: 0.8, packUnit: 'kg', isPromo: false },
+          kaufland: { brand: 'K-Classic (кутия 800g)', priceEUR: 4.49, packQty: 0.8, packUnit: 'kg', isPromo: true, promoNote: 'Топ оферта (-10%)' },
+          tmarket: { brand: 'Extra Line (кутия 800g)', priceEUR: 4.89, packQty: 0.8, packUnit: 'kg', isPromo: true, promoNote: 'Специална цена' },
+          billa: { brand: 'Clever (вакуум 400g)', priceEUR: 2.75, packQty: 0.4, packUnit: 'kg', isPromo: false },
+          fantastico: { brand: 'Димитър Маджаров (500g)', priceEUR: 4.85, packQty: 0.5, packUnit: 'kg', isPromo: false }
+        }
+      },
+      {
+        id: 'kashkaval-cow-bds',
+        name: 'Кашкавал от краве мляко БДС (400g)',
+        category: 'dairy',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: true,
+        description: 'Български кашкавал от краве мляко с 45-дневно зреене',
+        prices: {
+          lidl: { brand: 'Milbona БДС 400g', priceEUR: 3.90, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Classic БДС 400g', priceEUR: 3.79, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          tmarket: { brand: 'Extra Line БДС 400g', priceEUR: 3.85, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Billa Brand 400g', priceEUR: 4.20, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Карабулак 400g', priceEUR: 5.10, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'butter-82-250',
+        name: 'Краве масло 82% (250g)',
+        category: 'dairy',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Натурално краве масло екстра качество 82% масленост',
+        prices: {
+          lidl: { brand: 'Pilos 250g', priceEUR: 1.85, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Lidl Plus (-14%)' },
+          kaufland: { brand: 'K-Classic 250g', priceEUR: 2.10, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          tmarket: { brand: 'Optima 250g', priceEUR: 1.95, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Clever 250g', priceEUR: 1.99, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'President 250g', priceEUR: 3.20, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'eggs-l-10',
+        name: 'Яйца размер L (10 бр.)',
+        category: 'meat',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Пресни кокоши яйца клас А, размер L, от български производител',
+        prices: {
+          lidl: { brand: 'Freshona L (10 бр.)', priceEUR: 2.20, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Classic L (10 бр.)', priceEUR: 1.89, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Червен петък (-12%)' },
+          tmarket: { brand: 'Extra Line L (10 бр.)', priceEUR: 2.05, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Clever L (10 бр.)', priceEUR: 2.10, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Свободни кокошки (10 бр.)', priceEUR: 2.65, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'chicken-breast-1kg',
+        name: 'Пилешко филе охладено (кг)',
+        category: 'meat',
+        unit: 'kg',
+        step: 0.5,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Прясно охладено пилешко филе без кожа и кост',
+        prices: {
+          lidl: { brand: 'Pikok Охладено 1kg', priceEUR: 5.80, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          kaufland: { brand: 'K-Purland 1kg', priceEUR: 4.99, packQty: 1.0, packUnit: 'kg', isPromo: true, promoNote: 'Кауфланд карта (-13%)' },
+          tmarket: { brand: 'Охладено филе 1kg', priceEUR: 5.70, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          billa: { brand: 'Clever Пилешко 1kg', priceEUR: 5.95, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          fantastico: { brand: 'Градус Премиум 1kg', priceEUR: 6.75, packQty: 1.0, packUnit: 'kg', isPromo: false }
+        }
+      },
+      {
+        id: 'minced-meat-500g',
+        name: 'Кайма свинска 60/40 (500g)',
+        category: 'meat',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Охладена свинска кайма за скара и готвене',
+        prices: {
+          lidl: { brand: 'Grillmeister 500g', priceEUR: 2.30, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Purland 500g', priceEUR: 2.25, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          tmarket: { brand: 'Свинска кайма 500g', priceEUR: 2.20, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'T-Market брошура' },
+          billa: { brand: 'Billa Месарница 500g', priceEUR: 2.45, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Тандем 500g', priceEUR: 3.10, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'bananas-1kg',
+        name: 'Банани Extra (кг)',
+        category: 'produce',
+        unit: 'kg',
+        step: 0.5,
+        defaultQty: 1.5,
+        isBDS: false,
+        description: 'Свежи жълти банани клас I',
+        prices: {
+          lidl: { brand: 'Вносни пресни (кг)', priceEUR: 1.35, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          kaufland: { brand: 'Вносни клас I (кг)', priceEUR: 1.09, packQty: 1.0, packUnit: 'kg', isPromo: true, promoNote: 'Супер цена' },
+          tmarket: { brand: 'Вносни банани (кг)', priceEUR: 1.25, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          billa: { brand: 'Billa градина (кг)', priceEUR: 1.39, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          fantastico: { brand: 'Chiquita (кг)', priceEUR: 1.49, packQty: 1.0, packUnit: 'kg', isPromo: false }
+        }
+      },
+      {
+        id: 'tomatoes-pink-1kg',
+        name: 'Домати розови български (кг)',
+        category: 'produce',
+        unit: 'kg',
+        step: 0.5,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Традиционни розови домати от български оранжерии',
+        prices: {
+          lidl: { brand: 'Родна стряха (кг)', priceEUR: 1.85, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          kaufland: { brand: 'Български ферми (кг)', priceEUR: 1.79, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          tmarket: { brand: 'Български домати (кг)', priceEUR: 1.89, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          billa: { brand: 'Български градини (кг)', priceEUR: 1.95, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          fantastico: { brand: 'Селекция Фантастико (кг)', priceEUR: 2.40, packQty: 1.0, packUnit: 'kg', isPromo: false }
+        }
+      },
+      {
+        id: 'potatoes-1kg',
+        name: 'Картофи български мити (кг)',
+        category: 'produce',
+        unit: 'kg',
+        step: 1.0,
+        defaultQty: 2.0,
+        isBDS: false,
+        description: 'Жълти картофи за готвене и пържене',
+        prices: {
+          lidl: { brand: 'Родна стряха (мрежа 2kg)', priceEUR: 1.30, packQty: 2.0, packUnit: 'kg', isPromo: false },
+          kaufland: { brand: 'K-Classic (мрежа 2.5kg)', priceEUR: 1.48, packQty: 2.5, packUnit: 'kg', isPromo: true, promoNote: 'Изгодно семейно' },
+          tmarket: { brand: 'Картофи мити (кг)', priceEUR: 0.65, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          billa: { brand: 'Български картофи (кг)', priceEUR: 0.69, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          fantastico: { brand: 'Самоковски картофи (кг)', priceEUR: 0.79, packQty: 1.0, packUnit: 'kg', isPromo: false }
+        }
+      },
+      {
+        id: 'bread-white-650g',
+        name: 'Хляб бял нарязан (650g)',
+        category: 'bakery',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Традиционен бял хляб на филийки',
+        prices: {
+          lidl: { brand: 'Castelli Нарязан 650g', priceEUR: 0.75, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Classic Нарязан 650g', priceEUR: 0.72, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          tmarket: { brand: 'Хляб бял нарязан 650g', priceEUR: 0.70, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Billa Пекарна 650g', priceEUR: 0.79, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Симид Бял 650g', priceEUR: 0.89, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'flour-type-500',
+        name: 'Брашно тип 500 (1kg)',
+        category: 'bakery',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Пшенично брашно тип 500 за печива',
+        prices: {
+          lidl: { brand: 'Belbake 1kg', priceEUR: 0.72, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Classic 1kg', priceEUR: 0.69, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          tmarket: { brand: 'Extra Line 1kg', priceEUR: 0.65, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Clever 1kg', priceEUR: 0.68, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'София Мел Класик 1kg', priceEUR: 0.95, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'oil-sunflower-1l',
+        name: 'Слънчогледово олио (1L)',
+        category: 'pantry',
+        unit: 'L',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Рафинирано слънчогледово олио 100% чисто',
+        prices: {
+          lidl: { brand: "Vita D'or 1L", priceEUR: 1.30, packQty: 1.0, packUnit: 'L', isPromo: false },
+          kaufland: { brand: 'K-Classic 1L', priceEUR: 1.10, packQty: 1.0, packUnit: 'L', isPromo: true, promoNote: 'Супер уикенд (-12%)' },
+          tmarket: { brand: 'Extra Line 1L', priceEUR: 1.19, packQty: 1.0, packUnit: 'L', isPromo: false },
+          billa: { brand: 'Clever 1L', priceEUR: 1.22, packQty: 1.0, packUnit: 'L', isPromo: false },
+          fantastico: { brand: 'Бисер Олива 1L', priceEUR: 1.55, packQty: 1.0, packUnit: 'L', isPromo: false }
+        }
+      },
+      {
+        id: 'sugar-white-1kg',
+        name: 'Захар бяла кристална (1kg)',
+        category: 'pantry',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Бяла кристална захар от захарно цвекло',
+        prices: {
+          lidl: { brand: 'Belbake 1kg', priceEUR: 0.85, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Classic 1kg', priceEUR: 0.82, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          tmarket: { brand: 'Extra Line 1kg', priceEUR: 0.79, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Clever 1kg', priceEUR: 0.79, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Захарни Заводи 1kg', priceEUR: 0.95, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'coffee-lavazza-250g',
+        name: 'Кафе Lavazza Crema e Gusto (250g)',
+        category: 'drinks',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Мляно кафе с плътен аромат и кремообразен каймак',
+        prices: {
+          lidl: { brand: 'Lavazza 250g', priceEUR: 3.40, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'Lavazza 250g', priceEUR: 2.89, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Брошура топ оферта (-15%)' },
+          tmarket: { brand: 'Lavazza 250g', priceEUR: 3.30, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Lavazza 250g', priceEUR: 3.35, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Lavazza 250g', priceEUR: 3.65, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'mineral-water-devin-15l',
+        name: 'Минерална вода Девин (1.5L)',
+        category: 'drinks',
+        unit: 'L',
+        step: 1.5,
+        defaultQty: 1.5,
+        isBDS: false,
+        description: 'Натурална минерална вода от Родопите',
+        prices: {
+          lidl: { brand: 'Девин 1.5L', priceEUR: 0.48, packQty: 1.5, packUnit: 'L', isPromo: false },
+          kaufland: { brand: 'Девин 1.5L', priceEUR: 0.45, packQty: 1.5, packUnit: 'L', isPromo: false },
+          tmarket: { brand: 'Девин 1.5L', priceEUR: 0.46, packQty: 1.5, packUnit: 'L', isPromo: false },
+          billa: { brand: 'Девин 1.5L', priceEUR: 0.49, packQty: 1.5, packUnit: 'L', isPromo: false },
+          fantastico: { brand: 'Девин 1.5L', priceEUR: 0.55, packQty: 1.5, packUnit: 'L', isPromo: false }
+        }
+      },
+      {
+        id: 'pork-neck-1kg',
+        name: 'Свински врат без кост (кг)',
+        category: 'meat',
+        unit: 'kg',
+        step: 0.5,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Охладен свински врат без кост, идеален за скара и печене',
+        prices: {
+          lidl: { brand: 'Grillmeister (кг)', priceEUR: 5.49, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          kaufland: { brand: 'K-Purland (кг)', priceEUR: 4.69, packQty: 1.0, packUnit: 'kg', isPromo: true, promoNote: 'Червен петък брошура (-20%)' },
+          tmarket: { brand: 'Охладено месо (кг)', priceEUR: 4.99, packQty: 1.0, packUnit: 'kg', isPromo: true, promoNote: 'Топ оферта от брошурата' },
+          billa: { brand: 'Billa Месарница (кг)', priceEUR: 5.89, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          fantastico: { brand: 'Прясно българско (кг)', priceEUR: 6.69, packQty: 1.0, packUnit: 'kg', isPromo: false }
+        }
+      },
+      {
+        id: 'cucumbers-1kg',
+        name: 'Краставици български оранжерийни (кг)',
+        category: 'produce',
+        unit: 'kg',
+        step: 0.5,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Свежи краставици клас I от български производители',
+        prices: {
+          lidl: { brand: 'Родна стряха (кг)', priceEUR: 1.19, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          kaufland: { brand: 'Български ферми (кг)', priceEUR: 0.95, packQty: 1.0, packUnit: 'kg', isPromo: true, promoNote: 'Седмична брошура (-22%)' },
+          tmarket: { brand: 'Пресни зеленчуци (кг)', priceEUR: 1.05, packQty: 1.0, packUnit: 'kg', isPromo: true, promoNote: 'Брошура намаление' },
+          billa: { brand: 'Billa Градина (кг)', priceEUR: 1.25, packQty: 1.0, packUnit: 'kg', isPromo: false },
+          fantastico: { brand: 'Селекция (кг)', priceEUR: 1.49, packQty: 1.0, packUnit: 'kg', isPromo: false }
+        }
+      },
+      {
+        id: 'rice-krina-1kg',
+        name: 'Ориз бланширан / класически (1kg)',
+        category: 'pantry',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 1.0,
+        isBDS: false,
+        description: 'Качествен бял ориз за традиционни ястия и гарнитури',
+        prices: {
+          lidl: { brand: 'Golden Sun 1kg', priceEUR: 1.45, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'K-Classic 1kg', priceEUR: 1.19, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Акция на седмицата (-15%)' },
+          tmarket: { brand: 'Extra Line 1kg', priceEUR: 1.25, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          billa: { brand: 'Clever 1kg', priceEUR: 1.35, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Крина 1kg', priceEUR: 1.89, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'chocolate-milka-100g',
+        name: 'Шоколад Milka Alpine Milk (100g)',
+        category: 'pantry',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 2.0,
+        isBDS: false,
+        description: 'Алпийски млечен шоколад, класически сладък десерт',
+        prices: {
+          lidl: { brand: 'Milka 100g', priceEUR: 1.15, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'Milka 100g', priceEUR: 0.89, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Хит оферта от брошурата (-25%)' },
+          tmarket: { brand: 'Milka 100g', priceEUR: 0.95, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Топ намаление (-20%)' },
+          billa: { brand: 'Milka 100g', priceEUR: 0.92, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Billa Card уикенд' },
+          fantastico: { brand: 'Milka 100g', priceEUR: 1.29, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      },
+      {
+        id: 'beer-kamenitza-500ml',
+        name: 'Бира Каменица / Загорка кен (500ml)',
+        category: 'drinks',
+        unit: 'бр.',
+        step: 1.0,
+        defaultQty: 2.0,
+        isBDS: false,
+        description: 'Светло пиво в кен 500ml от водещи български пивоварни',
+        prices: {
+          lidl: { brand: 'Загорка 500ml', priceEUR: 0.75, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          kaufland: { brand: 'Каменица 500ml', priceEUR: 0.62, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Бирен уикенд (-18%)' },
+          tmarket: { brand: 'Каменица 500ml', priceEUR: 0.65, packQty: 1.0, packUnit: 'бр.', isPromo: true, promoNote: 'Брошура промоция' },
+          billa: { brand: 'Загорка 500ml', priceEUR: 0.79, packQty: 1.0, packUnit: 'бр.', isPromo: false },
+          fantastico: { brand: 'Загорка 500ml', priceEUR: 0.85, packQty: 1.0, packUnit: 'бр.', isPromo: false }
+        }
+      }
+    ];
+
+    const PRESET_BASKETS = [
+      {
+        id: 'nsi-official',
+        title: '🏛️ Официална кошница на НСИ',
+        description: 'Официалната малка потребителска кошница на НСИ и КНСБ с пълните 16 базови хранителни стоки.',
+        items: [
+          { productId: 'milk-fresh-32', qty: 2.0 },
+          { productId: 'yogurt-bds-36', qty: 4.0 },
+          { productId: 'cheese-white-bds', qty: 0.8 },
+          { productId: 'kashkaval-cow-bds', qty: 1.0 },
+          { productId: 'butter-82-250', qty: 1.0 },
+          { productId: 'eggs-l-10', qty: 2.0 },
+          { productId: 'chicken-breast-1kg', qty: 1.5 },
+          { productId: 'minced-meat-500g', qty: 1.0 },
+          { productId: 'bananas-1kg', qty: 2.0 },
+          { productId: 'tomatoes-pink-1kg', qty: 1.5 },
+          { productId: 'potatoes-1kg', qty: 2.0 },
+          { productId: 'bread-white-650g', qty: 2.0 },
+          { productId: 'flour-type-500', qty: 1.0 },
+          { productId: 'oil-sunflower-1l', qty: 1.0 },
+          { productId: 'sugar-white-1kg', qty: 1.0 },
+          { productId: 'coffee-lavazza-250g', qty: 1.0 },
+          { productId: 'mineral-water-devin-15l', qty: 3.0 }
+        ]
+      },
+      {
+        id: 'brochures-all',
+        title: '🔥 Всички топ промоции от брошурите',
+        description: 'Всички продукти с актуални промоционални оферти и брошурни намаления във веригите.',
+        items: [
+          { productId: 'milk-fresh-32', qty: 2.0 },
+          { productId: 'yogurt-bds-36', qty: 4.0 },
+          { productId: 'cheese-white-bds', qty: 0.8 },
+          { productId: 'butter-82-250', qty: 1.0 },
+          { productId: 'eggs-l-10', qty: 2.0 },
+          { productId: 'chicken-breast-1kg', qty: 1.5 },
+          { productId: 'pork-neck-1kg', qty: 1.5 },
+          { productId: 'minced-meat-500g', qty: 1.0 },
+          { productId: 'bananas-1kg', qty: 2.0 },
+          { productId: 'cucumbers-1kg', qty: 1.5 },
+          { productId: 'oil-sunflower-1l', qty: 1.0 },
+          { productId: 'rice-krina-1kg', qty: 1.0 },
+          { productId: 'chocolate-milka-100g', qty: 2.0 },
+          { productId: 'coffee-lavazza-250g', qty: 1.0 },
+          { productId: 'beer-kamenitza-500ml', qty: 4.0 }
+        ]
+      },
+      {
+        id: 'weekly-family',
+        title: 'Седмична семейна кошница',
+        items: [
+          { productId: 'milk-fresh-32', qty: 2.0 },
+          { productId: 'yogurt-bds-36', qty: 4.0 },
+          { productId: 'cheese-white-bds', qty: 0.8 },
+          { productId: 'kashkaval-cow-bds', qty: 1.0 },
+          { productId: 'eggs-l-10', qty: 2.0 },
+          { productId: 'chicken-breast-1kg', qty: 1.5 },
+          { productId: 'bread-white-650g', qty: 2.0 },
+          { productId: 'bananas-1kg', qty: 2.0 },
+          { productId: 'tomatoes-pink-1kg', qty: 1.5 },
+          { productId: 'oil-sunflower-1l', qty: 1.0 }
+        ]
+      },
+      {
+        id: 'student-budget',
+        title: 'Студентски бюджет',
+        items: [
+          { productId: 'milk-fresh-32', qty: 1.0 },
+          { productId: 'yogurt-bds-36', qty: 2.0 },
+          { productId: 'eggs-l-10', qty: 1.0 },
+          { productId: 'bread-white-650g', qty: 1.0 },
+          { productId: 'potatoes-1kg', qty: 2.0 },
+          { productId: 'minced-meat-500g', qty: 1.0 },
+          { productId: 'coffee-lavazza-250g', qty: 1.0 }
+        ]
+      },
+      {
+        id: 'breakfast-bds',
+        title: 'Традиционна БДС закуска',
+        items: [
+          { productId: 'yogurt-bds-36', qty: 2.0 },
+          { productId: 'cheese-white-bds', qty: 0.5 },
+          { productId: 'butter-82-250', qty: 1.0 },
+          { productId: 'eggs-l-10', qty: 1.0 },
+          { productId: 'bread-white-650g', qty: 1.0 }
+        ]
+      }
+    ];
+
+    // --- ALGORITHMS ---
+    function calculateStoreBasket(basketItems, storeId) {
+      let totalSpendEUR = 0;
+      let totalPromoSavingsEUR = 0;
+      const itemsBreakdown = [];
+
+      for (const item of basketItems) {
+        const product = PRODUCTS.find(p => p.id === item.productId);
+        if (!product) continue;
+
+        const storePrice = product.prices[storeId];
+        if (!storePrice) {
+          itemsBreakdown.push({
+            productId: product.id,
+            productName: product.name,
+            isMissing: true,
+            spendEUR: 0,
+            packsNeeded: 0,
+            unitPriceEUR: 0,
+            brand: 'Не е налично',
+            isPromo: false
+          });
+          continue;
+        }
+
+        const requestedQty = Number(item.qty);
+        const packQty = Number(storePrice.packQty);
+        const packsNeeded = Math.max(1, Math.ceil(requestedQty / packQty));
+        const spendEUR = Number((packsNeeded * storePrice.priceEUR).toFixed(2));
+        const unitPriceEUR = Number((storePrice.priceEUR / packQty).toFixed(2));
+
+        let promoSavingsEUR = 0;
+        if (storePrice.isPromo) {
+          const estimatedRegular = storePrice.priceEUR / 0.85;
+          promoSavingsEUR = Number((packsNeeded * (estimatedRegular - storePrice.priceEUR)).toFixed(2));
+          totalPromoSavingsEUR += promoSavingsEUR;
+        }
+
+        totalSpendEUR += spendEUR;
+
+        itemsBreakdown.push({
+          productId: product.id,
+          productName: product.name,
+          category: product.category,
+          unit: product.unit,
+          requestedQty,
+          packsNeeded,
+          packQty,
+          packUnit: storePrice.packUnit,
+          pricePerPackEUR: storePrice.priceEUR,
+          spendEUR,
+          unitPriceEUR,
+          brand: storePrice.brand,
+          isPromo: storePrice.isPromo,
+          promoNote: storePrice.promoNote,
+          promoSavingsEUR,
+          isBDS: product.isBDS
+        });
+      }
+
+      return {
+        storeId,
+        totalSpendEUR: Number(totalSpendEUR.toFixed(2)),
+        totalPromoSavingsEUR: Number(totalPromoSavingsEUR.toFixed(2)),
+        itemsCount: itemsBreakdown.length,
+        itemsBreakdown
+      };
+    }
+
+    function rankAllStores(basketItems) {
+      if (!basketItems || basketItems.length === 0) {
+        return {
+          storeRankings: [],
+          winner: null,
+          mostExpensive: null,
+          averageSpendEUR: 0,
+          maxSavingsEUR: 0
+        };
+      }
+
+      const storeRankings = STORES.map(store => {
+        const basketResult = calculateStoreBasket(basketItems, store.id);
+        return {
+          ...store,
+          ...basketResult
+        };
+      });
+
+      storeRankings.sort((a, b) => a.totalSpendEUR - b.totalSpendEUR);
+
+      const totalSum = storeRankings.reduce((acc, s) => acc + s.totalSpendEUR, 0);
+      const averageSpendEUR = Number((totalSum / storeRankings.length).toFixed(2));
+      const winner = storeRankings[0];
+      const mostExpensive = storeRankings[storeRankings.length - 1];
+      const maxSavingsEUR = Number((mostExpensive.totalSpendEUR - winner.totalSpendEUR).toFixed(2));
+
+      return {
+        storeRankings,
+        winner,
+        mostExpensive,
+        averageSpendEUR,
+        maxSavingsEUR
+      };
+    }
+
+    function calculateSplitBasket(basketItems, singleStoreWinner, thresholdEUR = 3.0) {
+      if (!basketItems || basketItems.length < 2 || !singleStoreWinner) {
+        return null;
+      }
+
+      let bestSplit = null;
+      let maxSavingsEUR = 0;
+
+      for (let i = 0; i < STORES.length; i++) {
+        for (let j = i + 1; j < STORES.length; j++) {
+          const storeA = STORES[i];
+          const storeB = STORES[j];
+
+          let splitSpendEUR = 0;
+          const storeAItems = [];
+          const storeBItems = [];
+
+          for (const item of basketItems) {
+            const product = PRODUCTS.find(p => p.id === item.productId);
+            if (!product) continue;
+
+            const priceA = product.prices[storeA.id];
+            const priceB = product.prices[storeB.id];
+
+            const reqQty = Number(item.qty);
+            const packsA = Math.max(1, Math.ceil(reqQty / (priceA ? priceA.packQty : 1)));
+            const spendA = priceA ? Number((packsA * priceA.priceEUR).toFixed(2)) : Infinity;
+
+            const packsB = Math.max(1, Math.ceil(reqQty / (priceB ? priceB.packQty : 1)));
+            const spendB = priceB ? Number((packsB * priceB.priceEUR).toFixed(2)) : Infinity;
+
+            if (spendA <= spendB) {
+              splitSpendEUR += spendA;
+              storeAItems.push({
+                productName: product.name,
+                brand: priceA.brand,
+                spendEUR: spendA
+              });
+            } else {
+              splitSpendEUR += spendB;
+              storeBItems.push({
+                productName: product.name,
+                brand: priceB.brand,
+                spendEUR: spendB
+              });
+            }
+          }
+
+          if (storeAItems.length > 0 && storeBItems.length > 0) {
+            splitSpendEUR = Number(splitSpendEUR.toFixed(2));
+            const savingsEUR = Number((singleStoreWinner.totalSpendEUR - splitSpendEUR).toFixed(2));
+
+            if (savingsEUR > maxSavingsEUR) {
+              maxSavingsEUR = savingsEUR;
+              bestSplit = {
+                storeA,
+                storeB,
+                storeAItems,
+                storeBItems,
+                splitSpendEUR,
+                savingsEUR,
+                isRecommended: savingsEUR >= thresholdEUR,
+                thresholdEUR
+              };
+            }
+          }
+        }
+      }
+
+      return bestSplit;
+    }
+
+    // --- APPLICATION STATE ---
+    const state = {
+      basket: [...PRESET_BASKETS[0].items],
+      searchQuery: '',
+      selectedCategory: 'all',
+      bdsOnly: false,
+      promoOnly: false,
+      expandedStoreId: 'kaufland',
+      splitThreshold: 3.0
+    };
+
+    // --- CONTROLLERS ---
+    window.App = {
+      addItem(productId) {
+        const prod = PRODUCTS.find(p => p.id === productId);
+        if (!prod) return;
+        const existing = state.basket.find(i => i.productId === productId);
+        if (existing) {
+          existing.qty = Number((existing.qty + prod.step).toFixed(1));
+        } else {
+          state.basket.push({ productId: prod.id, qty: prod.defaultQty });
+        }
+        render();
+      },
+
+      updateQty(productId, newQty) {
+        const prod = PRODUCTS.find(p => p.id === productId);
+        if (newQty <= 0) {
+          state.basket = state.basket.filter(i => i.productId !== productId);
+        } else {
+          const item = state.basket.find(i => i.productId === productId);
+          if (item) {
+            item.qty = Number(newQty.toFixed(1));
+          }
+        }
+        render();
+      },
+
+      removeItem(productId) {
+        state.basket = state.basket.filter(i => i.productId !== productId);
+        render();
+      },
+
+      clearBasket() {
+        state.basket = [];
+        render();
+      },
+
+      loadPreset(presetId) {
+        const preset = PRESET_BASKETS.find(p => p.id === presetId);
+        if (preset) {
+          state.basket = JSON.parse(JSON.stringify(preset.items));
+          render();
+        }
+      },
+
+      setCategory(catId) {
+        state.selectedCategory = catId;
+        render();
+      },
+
+      setSearch(val) {
+        state.searchQuery = val;
+        render();
+      },
+
+      toggleBds(checked) {
+        state.bdsOnly = checked;
+        render();
+      },
+
+      togglePromo(checked) {
+        state.promoOnly = checked;
+        render();
+      },
+
+      toggleStoreAccordion(storeId) {
+        state.expandedStoreId = (state.expandedStoreId === storeId) ? null : storeId;
+        render();
+      },
+
+      copyShoppingList() {
+        const ranking = rankAllStores(state.basket);
+        if (!ranking.winner) return;
+
+        let text = `🛒 МОЯТА КОШНИЦА (Кошница.bg)\n`;
+        text += `🏆 Най-изгоден магазин: ${ranking.winner.name} (Общо: €${ranking.winner.totalSpendEUR.toFixed(2)})\n`;
+        text += `💰 Спестяване спрямо най-скъпия: €${ranking.maxSavingsEUR.toFixed(2)}\n\n`;
+        text += `СПИСЪК ЗА ПАЗАРУВАНЕ:\n`;
+        ranking.winner.itemsBreakdown.forEach((item, idx) => {
+          text += `[ ] ${idx + 1}. ${item.productName} — ${item.requestedQty} ${item.unit} (${item.brand}) -> €${item.spendEUR.toFixed(2)}\n`;
+        });
+
+        const split = calculateSplitBasket(state.basket, ranking.winner, state.splitThreshold);
+        if (split && split.isRecommended) {
+          text += `\n⚡ ОПТИМАЛНО РАЗДЕЛЯНЕ (Спестяване: +€${split.savingsEUR.toFixed(2)}):\n`;
+          text += `📍 В ${split.storeA.name}: ${split.storeAItems.map(i => i.productName).join(', ')}\n`;
+          text += `📍 В ${split.storeB.name}: ${split.storeBItems.map(i => i.productName).join(', ')}\n`;
+        }
+
+        text += `\nВсички цени са в EUR (€). Генерирано от Кошница.bg`;
+
+        navigator.clipboard.writeText(text);
+        const toast = document.getElementById('toast');
+        toast.classList.remove('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'pointer-events-none');
+        }, 3000);
+      }
+    };
+
+    // --- VIEW RENDERER ---
+    function render() {
+      const ranking = rankAllStores(state.basket);
+      const split = ranking.winner ? calculateSplitBasket(state.basket, ranking.winner, state.splitThreshold) : null;
+
+      // Filtered products
+      const filteredProducts = PRODUCTS.filter(p => {
+        if (state.selectedCategory !== 'all' && p.category !== state.selectedCategory) return false;
+        if (state.bdsOnly && !p.isBDS) return false;
+        if (state.promoOnly) {
+          const hasPromo = Object.values(p.prices).some(pr => pr.isPromo);
+          if (!hasPromo) return false;
+        }
+        if (state.searchQuery.trim()) {
+          const q = state.searchQuery.toLowerCase();
+          const matchName = p.name.toLowerCase().includes(q);
+          const matchDesc = p.description.toLowerCase().includes(q);
+          const matchBrand = Object.values(p.prices).some(pr => pr.brand.toLowerCase().includes(q));
+          if (!matchName && !matchDesc && !matchBrand) return false;
+        }
+        return true;
+      });
+
+      const root = document.getElementById('root');
+      root.innerHTML = `
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-400 flex items-center justify-center text-white shadow-md text-xl">
+                🛒
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Кошница.bg</h1>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    София MVP
+                  </span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                    🇪🇺 EUR (€)
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 font-medium">
+                  Интелигентно сравнение на цени в най-големите магазини в България
+                </p>
+              </div>
+            </div>
+
+            <!-- Chains Badges -->
+            <div class="flex items-center gap-2 text-xs">
+              ${STORES.map(s => `
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-medium border border-slate-200">
+                  <span>${s.logo}</span>
+                  <span>${s.name}</span>
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        </header>
+
+        <!-- Presets Bar -->
+        <div class="bg-emerald-950 text-emerald-100 px-4 py-2 text-xs border-b border-emerald-900">
+          <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-emerald-400 uppercase tracking-wider text-[11px]">Бързи кошници:</span>
+              <div class="flex flex-wrap gap-1.5">
+                ${PRESET_BASKETS.map(p => `
+                  <button
+                    onclick="App.loadPreset('${p.id}')"
+                    class="px-2.5 py-1 rounded-md bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 transition font-medium border border-emerald-700/50"
+                  >
+                    ${p.title}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-emerald-400/80">Продукти в кошницата: <strong class="text-white">${state.basket.length}</strong></span>
+              ${state.basket.length > 0 ? `
+                <button
+                  onclick="App.clearBasket()"
+                  class="text-emerald-300 hover:text-red-300 transition underline underline-offset-2"
+                >
+                  Изчисти кошница
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          <!-- LEFT COLUMN: Search & Catalog (5 cols) -->
+          <div class="lg:col-span-5 flex flex-col gap-4">
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                  <span>🔍</span> Добави продукти
+                </h2>
+                <span class="text-xs text-slate-400">${filteredProducts.length} артикула</span>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="relative">
+                <input
+                  type="text"
+                  value="${state.searchQuery}"
+                  oninput="App.setSearch(this.value)"
+                  placeholder="Търси продукт, марка (напр. прясно мляко, сирене, Верея)..."
+                  class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
+                />
+                <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔎</span>
+                ${state.searchQuery ? `
+                  <button onclick="App.setSearch('')" class="absolute right-3 top-2 text-slate-400 hover:text-slate-600 text-xs">✕</button>
+                ` : ''}
+              </div>
+
+              <!-- Categories -->
+              <div class="flex flex-wrap gap-1.5 pt-1">
+                ${CATEGORIES.map(cat => `
+                  <button
+                    onclick="App.setCategory('${cat.id}')"
+                    class="px-2.5 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1 ${
+                      state.selectedCategory === cat.id
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                    }"
+                  >
+                    <span>${cat.icon}</span>
+                    <span>${cat.name}</span>
+                  </button>
+                `).join('')}
+              </div>
+
+              <!-- Filters -->
+              <div class="flex items-center gap-3 pt-1 text-xs text-slate-600 border-t border-slate-100">
+                <label class="flex items-center gap-1.5 cursor-pointer hover:text-slate-900">
+                  <input
+                    type="checkbox"
+                    ${state.bdsOnly ? 'checked' : ''}
+                    onchange="App.toggleBds(this.checked)"
+                    class="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span class="font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">БДС Стандарт</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer hover:text-slate-900">
+                  <input
+                    type="checkbox"
+                    ${state.promoOnly ? 'checked' : ''}
+                    onchange="App.togglePromo(this.checked)"
+                    class="rounded text-red-600 focus:ring-red-500"
+                  />
+                  <span class="font-medium text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">🔥 Само промоции</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Product Cards List -->
+            <div class="flex flex-col gap-2.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+              ${filteredProducts.map(p => {
+                const prices = Object.values(p.prices);
+                const minP = Math.min(...prices.map(pr => pr.priceEUR));
+                const maxP = Math.max(...prices.map(pr => pr.priceEUR));
+                const inBasket = state.basket.find(item => item.productId === p.id);
+                const hasPromo = prices.some(pr => pr.isPromo);
+
+                return `
+                  <div class="bg-white rounded-xl p-3 border border-slate-200 hover:border-emerald-300 transition shadow-2xs flex items-center justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-bold text-slate-900 truncate">${p.name}</h3>
+                        ${p.isBDS ? `<span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-1 rounded uppercase">БДС</span>` : ''}
+                        ${hasPromo ? `<span class="text-[10px] bg-red-100 text-red-700 font-extrabold px-1 rounded">АКЦИЯ</span>` : ''}
+                      </div>
+                      <p class="text-xs text-slate-500 line-clamp-1">${p.description}</p>
+                      <div class="flex items-center gap-2 mt-1 text-xs">
+                        <span class="font-semibold text-slate-800">€${minP.toFixed(2)} – €${maxP.toFixed(2)}</span>
+                        <span class="text-slate-400">|</span>
+                        <span class="text-slate-500">мерна единица: ${p.unit}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      ${inBasket ? `
+                        <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+                          <button
+                            onclick="App.updateQty('${p.id}', ${inBasket.qty - p.step})"
+                            class="w-6 h-6 rounded bg-white hover:bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs border border-emerald-200"
+                          >-</button>
+                          <span class="text-xs font-bold text-emerald-800 w-8 text-center">${inBasket.qty}</span>
+                          <button
+                            onclick="App.updateQty('${p.id}', ${inBasket.qty + p.step})"
+                            class="w-6 h-6 rounded bg-white hover:bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs border border-emerald-200"
+                          >+</button>
+                        </div>
+                      ` : `
+                        <button
+                          onclick="App.addItem('${p.id}')"
+                          class="px-3 py-1.5 bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 font-semibold text-xs rounded-lg transition border border-slate-200 hover:border-emerald-600 shadow-2xs"
+                        >+ Добави</button>
+                      `}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: Results & Optimization (7 cols) -->
+          <div class="lg:col-span-7 flex flex-col gap-5">
+            
+            <!-- Basket Bar -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🧺</span>
+                  <h2 class="font-bold text-slate-800 text-base">Избрани продукти в кошницата</h2>
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                    ${state.basket.length} вида
+                  </span>
+                </div>
+                ${state.basket.length > 0 ? `
+                  <button
+                    onclick="App.copyShoppingList()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                  >
+                    <span>📋</span> Копирай списък
+                  </button>
+                ` : ''}
+              </div>
+
+              ${state.basket.length === 0 ? `
+                <div class="text-center py-8 text-slate-400">
+                  <p class="text-3xl mb-2">🛒</p>
+                  <p class="font-medium text-sm">Вашата кошница е празна.</p>
+                  <p class="text-xs text-slate-400 mt-1">Добавете продукти от каталога вляво или изберете готова кошница от бутоните горе.</p>
+                </div>
+              ` : `
+                <div class="flex flex-wrap gap-2 max-h-44 overflow-y-auto pr-1">
+                  ${state.basket.map(item => {
+                    const prod = PRODUCTS.find(p => p.id === item.productId);
+                    if (!prod) return '';
+                    return `
+                      <div class="inline-flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-xs">
+                        <span class="font-medium text-slate-800">${prod.name}</span>
+                        <span class="font-bold text-emerald-700 bg-emerald-50 px-1 rounded">${item.qty} ${prod.unit}</span>
+                        <button onclick="App.removeItem('${item.productId}')" class="text-slate-400 hover:text-red-600 transition ml-1">✕</button>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `}
+            </div>
+
+            <!-- CHAMPION STORE CARD -->
+            ${ranking.winner ? `
+              <div class="bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 text-white rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 text-9xl opacity-10 pointer-events-none">🏆</div>
+                
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <div class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider text-emerald-200 mb-2">
+                      <span>🥇</span> Най-изгоден магазин за 1 спирка
+                    </div>
+                    <h3 class="text-2xl font-extrabold flex items-center gap-2">
+                      <span>${ranking.winner.logo}</span>
+                      <span>${ranking.winner.name}</span>
+                    </h3>
+                    <p class="text-xs text-emerald-100 mt-0.5">
+                      ${ranking.winner.badge} • ${ranking.winner.description}
+                    </p>
+                  </div>
+
+                  <div class="text-right">
+                    <div class="text-xs uppercase tracking-wider text-emerald-200 font-semibold">Обща сметка</div>
+                    <div class="text-3xl font-extrabold text-white tracking-tight">
+                      €${ranking.winner.totalSpendEUR.toFixed(2)}
+                    </div>
+                    ${ranking.winner.totalPromoSavingsEUR > 0 ? `
+                      <div class="text-xs text-emerald-200 font-medium">
+                        🔥 Включва €${ranking.winner.totalPromoSavingsEUR.toFixed(2)} от промоции
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+
+                <!-- Savings Comparison Strip -->
+                <div class="mt-4 pt-3 border-t border-white/15 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div class="bg-white/10 rounded-xl p-2.5 backdrop-blur-xs">
+                    <div class="text-emerald-200 text-[11px]">Спрямо най-скъпия:</div>
+                    <div class="font-extrabold text-base text-emerald-300">
+                      +€${ranking.maxSavingsEUR.toFixed(2)} спестени
+                    </div>
+                    <div class="text-[10px] text-emerald-100/70">спрямо ${ranking.mostExpensive.name} (€${ranking.mostExpensive.totalSpendEUR.toFixed(2)})</div>
+                  </div>
+                  <div class="bg-white/10 rounded-xl p-2.5 backdrop-blur-xs">
+                    <div class="text-emerald-200 text-[11px]">Средна цена за пазара:</div>
+                    <div class="font-extrabold text-base text-white">
+                      €${ranking.averageSpendEUR.toFixed(2)}
+                    </div>
+                    <div class="text-[10px] text-emerald-100/70">средно в София за този списък</div>
+                  </div>
+                  <div class="bg-white/10 rounded-xl p-2.5 backdrop-blur-xs col-span-2 sm:col-span-1">
+                    <div class="text-emerald-200 text-[11px]">Пълнота на кошницата:</div>
+                    <div class="font-extrabold text-base text-white">
+                      100% наличност
+                    </div>
+                    <div class="text-[10px] text-emerald-100/70">Всички ${state.basket.length} артикула намерени</div>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- SPLIT-BASKET OPTIMIZER CARD -->
+            ${split ? `
+              <div class="rounded-2xl p-5 border shadow-sm transition ${
+                split.isRecommended
+                  ? 'bg-amber-50/80 border-amber-200 text-amber-950'
+                  : 'bg-slate-100/80 border-slate-200 text-slate-700'
+              }">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">${split.isRecommended ? '⚡' : 'ℹ️'}</span>
+                    <h4 class="font-extrabold text-sm sm:text-base">
+                      ${split.isRecommended
+                        ? `Оптимизация на 2 магазина: Спестете още €${split.savingsEUR.toFixed(2)}!`
+                        : 'Препоръка за разделяне на пазаруването'}
+                    </h4>
+                  </div>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                    split.isRecommended
+                      ? 'bg-amber-200 text-amber-900 border border-amber-300'
+                      : 'bg-slate-200 text-slate-600'
+                  }">
+                    ${split.isRecommended ? 'Препоръчва се' : 'Не се препоръчва'}
+                  </span>
+                </div>
+
+                ${split.isRecommended ? `
+                  <div>
+                    <p class="text-xs text-amber-900/80 mb-3">
+                      Ако комбинирате пазаруването между <strong>${split.storeA.name}</strong> и <strong>${split.storeB.name}</strong>, общата сметка пада до <strong>€${split.splitSpendEUR.toFixed(2)}</strong> (допълнително <strong>€${split.savingsEUR.toFixed(2)}</strong> под най-добрия единичен магазин!).
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div class="bg-white rounded-xl p-3 border border-amber-200 shadow-2xs">
+                        <div class="font-bold text-slate-900 flex items-center gap-1.5 mb-1.5 pb-1 border-b border-slate-100">
+                          <span>${split.storeA.logo}</span>
+                          <span>В ${split.storeA.name} (${split.storeAItems.length} продукта):</span>
+                        </div>
+                        <ul class="space-y-1 text-slate-600 text-[11px]">
+                          ${split.storeAItems.map(item => `
+                            <li class="flex justify-between">
+                              <span>• ${item.productName} (${item.brand})</span>
+                              <strong class="text-slate-900 font-semibold">€${item.spendEUR.toFixed(2)}</strong>
+                            </li>
+                          `).join('')}
+                        </ul>
+                      </div>
+
+                      <div class="bg-white rounded-xl p-3 border border-amber-200 shadow-2xs">
+                        <div class="font-bold text-slate-900 flex items-center gap-1.5 mb-1.5 pb-1 border-b border-slate-100">
+                          <span>${split.storeB.logo}</span>
+                          <span>В ${split.storeB.name} (${split.storeBItems.length} продукта):</span>
+                        </div>
+                        <ul class="space-y-1 text-slate-600 text-[11px]">
+                          ${split.storeBItems.map(item => `
+                            <li class="flex justify-between">
+                              <span>• ${item.productName} (${item.brand})</span>
+                              <strong class="text-slate-900 font-semibold">€${item.spendEUR.toFixed(2)}</strong>
+                            </li>
+                          `).join('')}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ` : `
+                  <p class="text-xs text-slate-600">
+                    Разделянето между два магазина би спестило едва <strong>€${split.savingsEUR.toFixed(2)}</strong>, което е под вашия праг от <strong>€${state.splitThreshold.toFixed(2)}</strong>. По-изгодно и бързо е да направите цялото пазаруване на едно място в <strong>${ranking.winner.name}</strong>.
+                  </p>
+                `}
+              </div>
+            ` : ''}
+
+            <!-- STORE RANKINGS ACCORDION -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col gap-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-extrabold text-slate-900 text-base">Сравнение по магазини</h3>
+                  <p class="text-xs text-slate-500">Подредени от най-евтиния към най-скъпия за тази кошница</p>
+                </div>
+                <span class="text-xs font-semibold text-slate-500">Всички 5 вериги</span>
+              </div>
+
+              <div class="space-y-3">
+                ${ranking.storeRankings.map((store, index) => {
+                  const isWinner = index === 0;
+                  const diffFromWinner = store.totalSpendEUR - ranking.winner.totalSpendEUR;
+                  const isExpanded = state.expandedStoreId === store.id;
+
+                  return `
+                    <div class="rounded-xl border transition ${
+                      isWinner
+                        ? 'border-emerald-500 bg-emerald-50/20 shadow-2xs'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }">
+                      <!-- Store Header -->
+                      <div
+                        onclick="App.toggleStoreAccordion('${store.id}')"
+                        class="p-3.5 flex items-center justify-between gap-3 cursor-pointer select-none"
+                      >
+                        <div class="flex items-center gap-3">
+                          <span class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                            isWinner ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
+                          }">
+                            #${index + 1}
+                          </span>
+                          <div>
+                            <div class="flex items-center gap-2">
+                              <span class="text-base">${store.logo}</span>
+                              <span class="font-extrabold text-slate-900 text-sm">${store.name}</span>
+                              <span class="text-[11px] px-2 py-0.5 rounded font-medium bg-slate-100 text-slate-600">
+                                ${store.badge}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                          <div class="text-right">
+                            <div class="text-base font-extrabold text-slate-900">
+                              €${store.totalSpendEUR.toFixed(2)}
+                            </div>
+                            <div class="text-[11px] text-slate-500">
+                              ${isWinner
+                                ? `<strong class="text-emerald-700 font-bold">Най-ниска цена</strong>`
+                                : `<span class="text-red-500 font-medium">+€${diffFromWinner.toFixed(2)}</span>`
+                              }
+                            </div>
+                          </div>
+                          <span class="text-slate-400 text-xs">${isExpanded ? '▲' : '▼'}</span>
+                        </div>
+                      </div>
+
+                      <!-- Expanded Breakdown -->
+                      ${isExpanded ? `
+                        <div class="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
+                          <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Разбивка на продуктите в ${store.name}:
+                          </div>
+                          <div class="space-y-1.5">
+                            ${store.itemsBreakdown.map(item => `
+                              <div class="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
+                                <div>
+                                  <div class="font-medium text-slate-800 flex items-center gap-1.5">
+                                    <span>${item.productName}</span>
+                                    ${item.isPromo ? `<span class="text-[10px] bg-red-100 text-red-700 px-1 rounded font-bold">${item.promoNote || 'Промо'}</span>` : ''}
+                                    ${item.isBDS ? `<span class="text-[10px] bg-emerald-100 text-emerald-800 px-1 rounded font-bold">БДС</span>` : ''}
+                                  </div>
+                                  <div class="text-[11px] text-slate-500">
+                                    Марка: <strong>${item.brand}</strong> • ${item.packsNeeded} бр. × €${item.pricePerPackEUR.toFixed(2)} (€${item.unitPriceEUR.toFixed(2)}/${item.packUnit})
+                                  </div>
+                                </div>
+                                <div class="font-bold text-slate-900 text-right">
+                                  €${item.spendEUR.toFixed(2)}
+                                </div>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+          </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 mt-auto">
+          <div class="max-w-7xl mx-auto px-4">
+            <p class="font-semibold text-slate-700">Кошница.bg — Прототип за сравнение на цените на дребно в България (София)</p>
+            <p class="mt-1">
+              Всички валутни стойности са в <strong>EUR (€)</strong>. Сравнението включва собствени марки (Pilos, K-Classic, Extra Line, Clever) и национални марки по БДС стандарти.
+            </p>
+          </div>
+        </footer>
+      `;
+    }
+
+    // Immediate synchronous rendering on load
+    document.addEventListener('DOMContentLoaded', render);
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      render();
+    }
+  </script>
+</body>
+</html>
